@@ -353,8 +353,8 @@ class CustomTextCLIP(nn.Module):
         self.visual.set_grad_checkpointing(enable)
         self.text.set_grad_checkpointing(enable)
 
-    def encode_image(self, image, normalize: bool = False):
-        features = self.visual(image)
+    def encode_image(self, image, masks, normalize: bool = False):
+        features = self.visual(image, masks)
         return F.normalize(features, dim=-1) if normalize else features
 
     def encode_text(self, text, normalize: bool = False):
@@ -374,8 +374,9 @@ class CustomTextCLIP(nn.Module):
             self,
             image: Optional[torch.Tensor] = None,
             text: Optional[torch.Tensor] = None,
+            masks: Optional[torch.Tensor] = None,
     ):
-        image_features = self.encode_image(image, normalize=True) if image is not None else None
+        image_features = self.encode_image(image, masks, normalize=True) if image is not None else None
         text_features = self.encode_text(text, normalize=True) if text is not None else None
 
         if self.output_dict:

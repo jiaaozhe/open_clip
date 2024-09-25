@@ -313,10 +313,20 @@ def main(args):
 
         named_parameters = list(model.named_parameters())
         gain_or_bias_params = [p for n, p in named_parameters if exclude(n, p) and p.requires_grad]
-        rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+        # rest_params = [p for n, p in named_parameters if include(n, p) and p.requires_grad]
+        # add optim param for alpha conv1
+        rest_params = []
+        conv_opt_paras = []
+        for k, v in named_parameters:
+            if include(k, v) and v.requires_grad:
+                if "conv1_alpha" in k:
+                    conv_opt_paras.append(v)
+                else:
+                    rest_params.append(v) 
 
         optimizer = optim.AdamW(
             [
+                {"params": conv_opt_paras, "lr": args.alpha_lr},
                 {"params": gain_or_bias_params, "weight_decay": 0.},
                 {"params": rest_params, "weight_decay": args.wd},
             ],

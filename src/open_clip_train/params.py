@@ -132,6 +132,7 @@ def parse_args(args):
         "--epochs-cooldown", type=int, default=None,
         help="When scheduler w/ cooldown used, perform cooldown from total_epochs - cooldown_epochs onwards."
     )
+    parser.add_argument("--alpha-lr", type=float, default=None, help="Learning rate for alpha conv layer.")
     parser.add_argument("--lr", type=float, default=None, help="Learning rate.")
     parser.add_argument("--beta1", type=float, default=None, help="Adam beta 1.")
     parser.add_argument("--beta2", type=float, default=None, help="Adam beta 2.")

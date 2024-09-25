@@ -90,7 +90,10 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
             scheduler(step)
 
         images, texts = batch
+        masks = None
         images = images.to(device=device, dtype=input_dtype, non_blocking=True)
+        if masks is not None:
+            masks = masks.to(device=device, dtype=input_dtype, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
         data_time_m.update(time.time() - end)
@@ -98,7 +101,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
 
         if args.accum_freq == 1:
             with autocast():
-                model_out = model(images, texts)
+                model_out = model(images, texts, masks)
                 logit_scale = model_out["logit_scale"]
                 if args.distill:
                     with torch.no_grad():

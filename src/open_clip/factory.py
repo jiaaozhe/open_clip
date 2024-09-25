@@ -173,7 +173,7 @@ def load_checkpoint(
     resize_text_pos_embed(state_dict, model)
 
     # Finally, load the massaged state_dict into model
-    incompatible_keys = model.load_state_dict(state_dict, strict=strict)
+    incompatible_keys = model.load_state_dict(state_dict, strict=False)
     return incompatible_keys
 
 
