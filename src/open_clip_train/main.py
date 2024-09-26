@@ -326,9 +326,9 @@ def main(args):
 
         optimizer = optim.AdamW(
             [
-                {"params": conv_opt_paras, "lr": args.alpha_lr},
                 {"params": gain_or_bias_params, "weight_decay": 0.},
                 {"params": rest_params, "weight_decay": args.wd},
+                {"params": conv_opt_paras, "lr": args.lr * 1e2},
             ],
             lr=args.lr,
             betas=(args.beta1, args.beta2),
