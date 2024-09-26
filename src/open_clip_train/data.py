@@ -73,7 +73,7 @@ class CsvAugDataset(Dataset):
         choice = random.choice([0, 1])
         captions = self.captions[choice][idx]
         texts = self.tokenize([str(captions)])[0]
-        print(idx, choice, captions)
+        # print(idx, choice, captions)
         return images, texts
 
 class JsonlDataset(Dataset):
@@ -94,6 +94,30 @@ class JsonlDataset(Dataset):
     def __getitem__(self, idx):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
+        return images, texts
+
+class JsonAuglDataset(Dataset):
+    def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
+        logging.debug(f'Loading jsonl data from {input_filename}.')
+        df = pd.read_json(input_filename, lines=True)
+
+        self.images = df[img_key].tolist()
+        self.long_captions = df[caption_key].tolist()
+        self.short_captions = df['rewrite'].tolist()
+        self.captions = [self.long_captions, self.short_captions]
+        self.transforms = transforms
+        logging.debug('Done loading data.')
+
+        self.tokenize = tokenizer
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        images = self.transforms(Image.open(str(self.images[idx])))
+        choice = random.choice([0, 1])
+        captions = self.captions[choice][idx]
+        texts = self.tokenize([str(captions)])[0]
         return images, texts
 
 
@@ -551,6 +575,35 @@ def get_jsonl_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
 
     return DataInfo(dataloader, sampler)
 
+def get_jsonl_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
+    input_filename = args.train_data if is_train else args.val_data
+    assert input_filename
+    dataset = JsonAuglDataset(
+        input_filename,
+        preprocess_fn,
+        img_key=args.csv_img_key,
+        caption_key=args.csv_caption_key,
+        sep=args.csv_separator,
+        tokenizer=tokenizer
+    )
+    num_samples = len(dataset)
+    sampler = DistributedSampler(dataset) if args.distributed and is_train else None
+    shuffle = is_train and sampler is None
+
+    dataloader = DataLoader(
+        dataset,
+        batch_size=args.batch_size,
+        shuffle=shuffle,
+        num_workers=args.workers,
+        pin_memory=True,
+        sampler=sampler,
+        drop_last=is_train,
+    )
+    dataloader.num_samples = num_samples
+    dataloader.num_batches = len(dataloader)
+
+    return DataInfo(dataloader, sampler)
+
 def get_csv_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
@@ -640,6 +693,8 @@ def get_dataset_fn(data_path, dataset_type):
         return get_csv_aug_dataset
     elif dataset_type == "jsonl":
         return get_jsonl_dataset
+    elif dataset_type == "jsonl_aug":
+        return get_jsonl_aug_dataset
     elif dataset_type == "synthetic":
         return get_synthetic_dataset
     elif dataset_type == "auto":

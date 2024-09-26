@@ -61,7 +61,7 @@ def parse_args(args):
     )
     parser.add_argument(
         "--dataset-type",
-        choices=["webdataset", "csv", "synthetic", "auto", "csv_aug", "jsonl"],
+        choices=["webdataset", "csv", "synthetic", "auto", "csv_aug", "jsonl", "jsonl_aug"],
         default="auto",
         help="Which type of dataset to process."
     )
