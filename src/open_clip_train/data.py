@@ -55,7 +55,7 @@ class CsvDataset(Dataset):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
         # masks = None
-        mask = images[:, :, -1]
+        mask = images[0, :, :]
         mask_torch = self.mask_transform(np.ones_like(mask) * 255)
         return images, texts, mask_torch
 
