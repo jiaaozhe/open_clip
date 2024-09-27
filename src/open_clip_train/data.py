@@ -28,6 +28,12 @@ except ImportError:
     hvd = None
 
 random.seed(int(time.time()))
+from torchvision import transforms
+mask_transform = transforms.Compose([
+    transforms.ToTensor(), 
+    transforms.Resize((224, 224)),
+    transforms.Normalize(0.5, 0.26)
+])
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
@@ -40,6 +46,7 @@ class CsvDataset(Dataset):
         logging.debug('Done loading data.')
 
         self.tokenize = tokenizer
+        self.mask_transform = mask_transform
 
     def __len__(self):
         return len(self.captions)
@@ -48,7 +55,9 @@ class CsvDataset(Dataset):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
         # masks = None
-        return images, texts
+        mask = images[:, :, -1]
+        mask_torch = self.mask_transform(np.ones_like(mask) * 255)
+        return images, texts, mask_torch
 
 class CsvAugDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):

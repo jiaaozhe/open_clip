@@ -89,8 +89,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if not args.skip_scheduler:
             scheduler(step)
 
-        images, texts = batch
-        masks = None
+        images, texts, masks = batch
+        # masks = None
         images = images.to(device=device, dtype=input_dtype, non_blocking=True)
         if masks is not None:
             masks = masks.to(device=device, dtype=input_dtype, non_blocking=True)

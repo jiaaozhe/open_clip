@@ -171,9 +171,13 @@ def load_checkpoint(
 
     resize_pos_embed(state_dict, model)
     resize_text_pos_embed(state_dict, model)
-
+    # add rgba_conv_weight
+    if 'visual.conv1_alpha.weight' not in state_dict.keys(): # zero initialization on alpha channel
+        rgb_weight = state_dict['visual.conv1.weight'].clone().detach()
+        rgba_weigth = torch.zeros_like(rgb_weight)[:, 0:1, :, :]
+        state_dict['visual.conv1_alpha.weight'] = rgba_weigth
     # Finally, load the massaged state_dict into model
-    incompatible_keys = model.load_state_dict(state_dict, strict=False)
+    incompatible_keys = model.load_state_dict(state_dict, strict=True)
     return incompatible_keys
 
 
