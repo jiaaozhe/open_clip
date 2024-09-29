@@ -21,6 +21,8 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableD
 from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
+import pickle
+from pycocotools import mask as maskUtils
 
 try:
     import horovod.torch as hvd
@@ -34,6 +36,74 @@ mask_transform = transforms.Compose([
     transforms.Resize((224, 224)),
     transforms.Normalize(0.5, 0.26)
 ])
+
+def crop_center(img, croph, cropw):
+    h, w = img.shape[:2]
+    starth = h//2 - (croph//2)
+    startw = w//2 - (cropw//2)    
+    return img[starth:starth+croph, startw:startw+cropw, :]
+
+class AlphaClipDataset(Dataset):
+    def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
+        logging.debug(f'Loading images id data from {input_filename}.')
+        # df = pd.read_csv(input_filename, sep=sep)
+        self.ids = pickle.load(open(input_filename, 'rb'))
+        self.root_pth = 'dataset/grit/'
+        # self.images = df[img_key].tolist()
+        # self.captions = df[caption_key].tolist()
+        self.transforms = transforms
+        logging.debug('Done loading data.')
+
+        self.tokenize = tokenizer
+        self.mask_transform = mask_transform
+        self.with_common_pair_prop = 0
+
+    def __len__(self):
+        return len(self.ids)
+
+    def __getitem__(self, idx):
+        id = self.ids[idx]
+        ann = json.loads(self.root_pth + str(id) + '.json')
+        img = Image.open(str(self.root_pth + str(id) + '.jpg'))
+        images = self.transforms(img)
+        ref_exps = ann['ref_exps']
+        choice = random.randint(0, len(ref_exps)-1)
+        ref_exp = ref_exps[choice]
+        text = ann['caption'][int(ref_exp[0]): int(ref_exp[1])]
+        mask = maskUtils.decode(ann['seudo_masks'][choice]) #TODO determine how to load mask data, maybe not load form ann.jsonl
+        if mask.shape != img.shape[:2]:
+            img = np.rot90(img)
+        rgba = np.concatenate((img, np.expand_dims(mask, axis=-1)), axis=-1)
+        h, w = rgba.shape[:2]
+        choice = random.randint(0, 1)
+        choice = 0
+        if choice == 0:
+            if max(h, w) == w:
+                pad = (w - h) // 2
+                l, r = pad, w - h - pad
+                rgba = np.pad(rgba, ((l, r), (0, 0), (0, 0)), 'constant', constant_values=0)
+            else:
+                pad = (h - w) // 2
+                l, r = pad, h - w - pad
+                rgba = np.pad(rgba, ((0, 0), (l, r), (0, 0)), 'constant', constant_values=0)
+        else:
+            if min(h, w) == h:
+                rgba = crop_center(rgba, h, h)
+            else:
+                rgba = crop_center(rgba, w, w)
+        rgb = rgba[:, :, :-1]
+        mask = rgba[:, :, -1]
+        # image_torch = self.clip_standard_transform(rgb)
+        choice = random.random()
+        if choice >= self.with_common_pair_prop:
+            mask_torch = self.mask_transform(mask * 255)
+            text = self.tokenize([text])[0]
+            return images, text, mask_torch
+        else: # half ori image
+            mask_torch = self.mask_transform(np.ones_like(mask) * 255)
+            text = self.tokenize([ann['caption']])[0]
+            return images, text, mask_torch
+
 
 class CsvDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
