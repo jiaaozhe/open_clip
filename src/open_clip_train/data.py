@@ -48,7 +48,7 @@ class AlphaClipDataset(Dataset):
         logging.debug(f'Loading ids data from {input_filename}.')
         # input_filename输入的是所有训练数据的ids，格式为 *.pkl
         self.ids = pickle.load(open(input_filename, 'rb'))
-        self.root_pth = './dataset/pair/'
+        self.root_pth = './dataset/GRIT/'
         # self.images = df[img_key].tolist()
         # self.captions = df[caption_key].tolist()
         self.transforms = transforms
