@@ -10,17 +10,17 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --lock-image \
     --lock-text \
     --seed 1234 \
-    --batch-size 2 \
+    --batch-size 1 \
     --precision amp \
     --workers 2 \
     --report-to tensorboard \
     --save-frequency 5 \
     --dataset-type csv \
     --csv-separator="," \
-    --train-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/rewrite.csv"\
-    --val-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/rewrite.csv" \
+    --train-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.csv"\
+    --val-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.csv" \
     --csv-img-key image_path \
-    --csv-caption-key rewrite \
+    --csv-caption-key caption \
     --warmup 1000 \
     --lr=5e-6 \
     --wd=0.1 \

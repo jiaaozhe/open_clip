@@ -23,7 +23,8 @@ def gather_features(
         gather_with_grad=False,
         rank=0,
         world_size=1,
-        use_horovod=False
+        use_horovod=False,
+        bge_m3_text_embedding=None
 ):
     assert has_distributed, 'torch.distributed did not import correctly, please use a PyTorch version with support.'
     if use_horovod:
@@ -31,36 +32,50 @@ def gather_features(
         if gather_with_grad:
             all_image_features = hvd.allgather(image_features)
             all_text_features = hvd.allgather(text_features)
+            all_bge_m3_text_embedding = hvd.allgather(bge_m3_text_embedding)
         else:
             with torch.no_grad():
                 all_image_features = hvd.allgather(image_features)
                 all_text_features = hvd.allgather(text_features)
+                all_bge_m3_text_embedding = hvd.allgather(bge_m3_text_embedding)
             if not local_loss:
                 # ensure grads for local rank when all_* features don't have a gradient
                 gathered_image_features = list(all_image_features.chunk(world_size, dim=0))
-                gathered_text_features = list(all_text_features.chunk(world_size, dim=0))
+                gathered_text_features = list(all_text_features.chunk(world_size, dim=0))                
+                gathered_bge_m3_text_embedding = list(all_bge_m3_text_embedding.chunk(world_size, dim=0))                
+
                 gathered_image_features[rank] = image_features
                 gathered_text_features[rank] = text_features
+                gathered_bge_m3_text_embedding[rank] = bge_m3_text_embedding
                 all_image_features = torch.cat(gathered_image_features, dim=0)
-                all_text_features = torch.cat(gathered_text_features, dim=0)
+                all_text_features = torch.cat(gathered_text_features, dim=0)                
+                all_bge_m3_text_embedding = torch.cat(gathered_bge_m3_text_embedding, dim=0)                
+
     else:
         # We gather tensors from all gpus
         if gather_with_grad:
             all_image_features = torch.cat(torch.distributed.nn.all_gather(image_features), dim=0)
             all_text_features = torch.cat(torch.distributed.nn.all_gather(text_features), dim=0)
+            all_bge_m3_text_embedding = torch.cat(torch.distributed.nn.all_gather(bge_m3_text_embedding), dim=0)
         else:
             gathered_image_features = [torch.zeros_like(image_features) for _ in range(world_size)]
             gathered_text_features = [torch.zeros_like(text_features) for _ in range(world_size)]
+            gathered_bge_m3_text_embedding = [torch.zeros_like(bge_m3_text_embedding) for _ in range(world_size)]
             dist.all_gather(gathered_image_features, image_features)
             dist.all_gather(gathered_text_features, text_features)
+            dist.all_gather(gathered_bge_m3_text_embedding, bge_m3_text_embedding)
+            
+
             if not local_loss:
                 # ensure grads for local rank when all_* features don't have a gradient
                 gathered_image_features[rank] = image_features
                 gathered_text_features[rank] = text_features
+                gathered_bge_m3_text_embedding[rank] = bge_m3_text_embedding
             all_image_features = torch.cat(gathered_image_features, dim=0)
             all_text_features = torch.cat(gathered_text_features, dim=0)
+            all_bge_m3_text_embedding = torch.cat(gathered_bge_m3_text_embedding, dim=0)
 
-    return all_image_features, all_text_features
+    return all_image_features, all_text_features, all_bge_m3_text_embedding
 
 
 class ClipLoss(nn.Module):
@@ -167,11 +182,11 @@ class CustomClipLoss(nn.Module):
             labels = self.labels[device]
         return labels
 
-    def get_logits(self, image_features, text_features, logit_scale):
+    def get_logits(self, image_features, text_features, logit_scale, bge_m3_text_embedding=None):
         if self.world_size > 1:
-            all_image_features, all_text_features = gather_features(
+            all_image_features, all_text_features, all_bge_m3_text_embedding = gather_features(
                 image_features, text_features,
-                self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod)
+                self.local_loss, self.gather_with_grad, self.rank, self.world_size, self.use_horovod, bge_m3_text_embedding=bge_m3_text_embedding)
 
             if self.local_loss:
                 logits_per_image = logit_scale * image_features @ all_text_features.T
@@ -181,27 +196,29 @@ class CustomClipLoss(nn.Module):
                 logits_per_text = logits_per_image.T
             images_similarity = all_image_features @ all_image_features.T
             texts_similarity = all_text_features @ all_text_features.T
+            bge_m3_text_similarity = all_bge_m3_text_embedding @ all_bge_m3_text_embedding.T
         else:
             logits_per_image = logit_scale * image_features @ text_features.T
             logits_per_text = logit_scale * text_features @ image_features.T
             images_similarity = image_features @ image_features.T
             texts_similarity = text_features @ text_features.T
+            bge_m3_text_similarity = bge_m3_text_embedding @ bge_m3_text_embedding.T
             
-        return logits_per_image, logits_per_text, images_similarity, texts_similarity
+        return logits_per_image, logits_per_text, images_similarity, texts_similarity, bge_m3_text_similarity
 
-    def forward(self, image_features, text_features, logit_scale, output_dict=False):
+    def forward(self, image_features, text_features, logit_scale, output_dict=False, bge_m3_text_embedding=None):
         device = image_features.device
-        logits_per_image, logits_per_text, images_similarity, texts_similarity = self.get_logits(image_features, text_features, logit_scale)
-        print('text similarity before: ', texts_similarity)
-        ones = torch.ones_like(texts_similarity)
-        zeros = torch.zeros_like(texts_similarity)
-        texts_similarity = torch.where(texts_similarity > 0.97, ones, texts_similarity)
-        texts_similarity = torch.where(texts_similarity <= 0.97, zeros, texts_similarity)
+        logits_per_image, logits_per_text, images_similarity, texts_similarity, bge_m3_text_similarity = self.get_logits(image_features, text_features, logit_scale, bge_m3_text_embedding=bge_m3_text_embedding)
+        # print('text similarity before: ', texts_similarity)
+        # ones = torch.ones_like(texts_similarity)
+        # zeros = torch.zeros_like(texts_similarity)
+        # texts_similarity = torch.where(texts_similarity > 0.97, ones, texts_similarity)
+        # texts_similarity = torch.where(texts_similarity <= 0.97, zeros, texts_similarity)
         # images_similarity = torch.where(images_similarity < 0.9, zeros, images_similarity)
-        text_soft_targets = F.softmax(texts_similarity / 0.02, dim=-1)
+        # text_soft_targets = F.softmax(texts_similarity / 0.02, dim=-1)
         # image_soft_targets = F.softmax(images_similarity / 0.02, dim=-1)
-        print('text_similarity', texts_similarity)
-        print('text_soft_targets: ', text_soft_targets)
+        # print('text_similarity', texts_similarity)
+        # print('text_soft_targets: ', text_soft_targets)
         # print('image_similarity', images_similarity)
         # print('image_soft_target: ', image_soft_targets)
 
@@ -211,9 +228,14 @@ class CustomClipLoss(nn.Module):
         #     F.cross_entropy(logits_per_image, labels) +
         #     F.cross_entropy(logits_per_text, labels)
         # ) / 2
+        print('bge_m3_text_similarity', bge_m3_text_similarity)
+        bge_m3_soft_targets = F.softmax(bge_m3_text_similarity / 0.1, dim=-1)
+        print('bge_m3_soft_targets', bge_m3_soft_targets)
+
+
         total_loss = (
-            F.cross_entropy(logits_per_image, text_soft_targets) +
-            F.cross_entropy(logits_per_text, text_soft_targets)
+            F.cross_entropy(logits_per_image, bge_m3_soft_targets) +
+            F.cross_entropy(logits_per_text, bge_m3_soft_targets)
         ) / 2
 
         return {"contrastive_loss": total_loss} if output_dict else total_loss

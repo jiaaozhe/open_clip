@@ -47,7 +47,8 @@ class CsvDataset(Dataset):
     def __getitem__(self, idx):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
-        return images, texts
+        origin_texts = str(self.captions[idx])
+        return images, texts, origin_texts
 
 class CsvAugDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
@@ -399,7 +400,7 @@ class ResampledShards2(IterableDataset):
                 yield dict(url=self.rng.choices(self.urls, weights=self.weights, k=1)[0])
 
 
-def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, tokenizer=None):
+def get_wds_dataset(args, preprocess_img, is_train, epoch=0, floor=False, tokenizer=None, beg_m3_tokenizer=None):
     input_shards = args.train_data if is_train else args.val_data
     assert input_shards is not None
     resampled = getattr(args, 'dataset_resampled', False) and is_train
@@ -546,7 +547,7 @@ def get_csv_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
 
     return DataInfo(dataloader, sampler)
 
-def get_jsonl_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
+def get_jsonl_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None, beg_m3_tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
     dataset = JsonlDataset(
@@ -575,7 +576,7 @@ def get_jsonl_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
 
     return DataInfo(dataloader, sampler)
 
-def get_jsonl_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
+def get_jsonl_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None, beg_m3_tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
     dataset = JsonAuglDataset(
@@ -604,7 +605,7 @@ def get_jsonl_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None
 
     return DataInfo(dataloader, sampler)
 
-def get_csv_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None):
+def get_csv_aug_dataset(args, preprocess_fn, is_train, epoch=0, tokenizer=None, beg_m3_tokenizer=None):
     input_filename = args.train_data if is_train else args.val_data
     assert input_filename
     dataset = CsvAugDataset(

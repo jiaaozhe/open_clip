@@ -60,13 +60,30 @@ def backward(total_loss, scaler):
     else:
         total_loss.backward()
 
+def inference_beg_m3(bge_m3_model, bge_m3_tokenizer, origin_texts, device):
+    encoded_input = bge_m3_tokenizer(origin_texts, padding=True, truncation=True, return_tensors='pt')
+    encoded_input.to(device)
+    # for s2p(short query to long passage) retrieval task, add an instruction to query (not add instruction for passages)
+    # encoded_input = tokenizer([instruction + q for q in queries], padding=True, truncation=True, return_tensors='pt')
 
-def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=None):
+    # Compute token embeddings
+    with torch.no_grad():
+        model_output = bge_m3_model(**encoded_input)
+        # Perform pooling. In this case, cls pooling.
+        sentence_embeddings = model_output[0][:, 0]
+    # normalize embeddings
+    sentence_embeddings = torch.nn.functional.normalize(sentence_embeddings, p=2, dim=1)
+    # print("Sentence embeddings:", sentence_embeddings)
+    # similarity = sentence_embeddings @ sentence_embeddings.T
+    return sentence_embeddings
+
+def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist_model, args, tb_writer=None, bge_m3_tokenizer=None, bge_m3_model=None):
     device = torch.device(args.device)
     autocast = get_autocast(args.precision)
     input_dtype = get_input_dtype(args.precision)
 
     model.train()
+    bge_m3_model.eval()
     if args.distill:
         dist_model.eval()
 
@@ -89,7 +106,7 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if not args.skip_scheduler:
             scheduler(step)
 
-        images, texts = batch
+        images, texts, origin_texts = batch
         images = images.to(device=device, dtype=input_dtype, non_blocking=True)
         texts = texts.to(device=device, non_blocking=True)
 
@@ -99,12 +116,13 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if args.accum_freq == 1:
             with autocast():
                 model_out = model(images, texts)
+                bge_m3_text_embedding = inference_beg_m3(bge_m3_model, bge_m3_tokenizer, origin_texts, device)
                 logit_scale = model_out["logit_scale"]
                 if args.distill:
                     with torch.no_grad():
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
-                losses = loss(**model_out, output_dict=True)
+                losses = loss(**model_out, output_dict=True, bge_m3_text_embedding=bge_m3_text_embedding)
 
                 total_loss = sum(losses.values())
                 losses["loss"] = total_loss
