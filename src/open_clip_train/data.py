@@ -74,8 +74,9 @@ class CsvAugDataset(Dataset):
         choice = random.choice([0, 1])
         captions = self.captions[choice][idx]
         texts = self.tokenize([str(captions)])[0]
+        origin_texts = str(self.captions[choice][idx])
         # print(idx, choice, captions)
-        return images, texts
+        return images, texts, origin_texts
 
 class JsonlDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
@@ -95,7 +96,8 @@ class JsonlDataset(Dataset):
     def __getitem__(self, idx):
         images = self.transforms(Image.open(str(self.images[idx])))
         texts = self.tokenize([str(self.captions[idx])])[0]
-        return images, texts
+        origin_texts = str(self.captions[idx])
+        return images, texts, origin_texts
 
 class JsonAuglDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
@@ -119,7 +121,8 @@ class JsonAuglDataset(Dataset):
         choice = random.choice([0, 1])
         captions = self.captions[choice][idx]
         texts = self.tokenize([str(captions)])[0]
-        return images, texts
+        origin_texts = str(captions)
+        return images, texts, origin_texts
 
 
 class SharedEpoch:

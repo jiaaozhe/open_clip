@@ -83,7 +83,8 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
     input_dtype = get_input_dtype(args.precision)
 
     model.train()
-    bge_m3_model.eval()
+    if args.custom_clip_loss:
+        bge_m3_model.eval()
     if args.distill:
         dist_model.eval()
 
@@ -116,13 +117,16 @@ def train_one_epoch(model, data, loss, epoch, optimizer, scaler, scheduler, dist
         if args.accum_freq == 1:
             with autocast():
                 model_out = model(images, texts)
-                bge_m3_text_embedding = inference_beg_m3(bge_m3_model, bge_m3_tokenizer, origin_texts, device)
                 logit_scale = model_out["logit_scale"]
                 if args.distill:
                     with torch.no_grad():
                         dist_model_out = dist_model(images, texts)
                     model_out.update({f'dist_{k}': v for k, v in dist_model_out.items()})
-                losses = loss(**model_out, output_dict=True, bge_m3_text_embedding=bge_m3_text_embedding)
+                if args.custom_clip_loss:
+                    bge_m3_text_embedding = inference_beg_m3(bge_m3_model, bge_m3_tokenizer, origin_texts, device)
+                    losses = loss(**model_out, output_dict=True, bge_m3_text_embedding=bge_m3_text_embedding)
+                else:
+                    losses = loss(**model_out, output_dict=True)
 
                 total_loss = sum(losses.values())
                 losses["loss"] = total_loss
@@ -291,7 +295,7 @@ def evaluate(model, data, epoch, args, tb_writer=None, tokenizer=None):
         all_image_features, all_text_features = [], []
         with torch.inference_mode():
             for i, batch in enumerate(dataloader):
-                images, texts = batch
+                images, texts, _ = batch
                 images = images.to(device=device, dtype=input_dtype, non_blocking=True)
                 texts = texts.to(device=device, non_blocking=True)
 

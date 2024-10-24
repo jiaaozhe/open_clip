@@ -1,5 +1,23 @@
 # OpenCLIP
 
+## Branch
+
+### 1. main
+Add BGE-M3 model to construct soft lable according to text similarity within a batch.
+
+Supporting josnl format file.
+
+Supporting random select captions  for rewrite text augmentation.
+
+### 2. alpha_clip
+Add AlphaCLIP training strategy with a new branch.
+
+-----
+
+-----
+
+-----
+
 [[Paper]](https://arxiv.org/abs/2212.07143) [[Citations]](#citing) [[Clip Colab]](https://colab.research.google.com/github/mlfoundations/open_clip/blob/master/docs/Interacting_with_open_clip.ipynb) [[Coca Colab]](https://colab.research.google.com/github/mlfoundations/open_clip/blob/master/docs/Interacting_with_open_coca.ipynb)
 [![pypi](https://img.shields.io/pypi/v/open_clip_torch.svg)](https://pypi.python.org/pypi/open_clip_torch)
 

@@ -223,8 +223,12 @@ def main(args):
         model_kwargs['init_logit_scale'] = np.log(10)  # different from CLIP
         model_kwargs['init_logit_bias'] = -10
 
-    beg_m3_tokenizer = AutoTokenizer.from_pretrained('../pretrained_models/bge-m3')
-    beg_m3_model = AutoModel.from_pretrained('../pretrained_models/bge-m3', device_map=device)
+    if args.custom_clip_loss:
+        beg_m3_tokenizer = AutoTokenizer.from_pretrained('../pretrained_models/bge-m3')
+        beg_m3_model = AutoModel.from_pretrained('../pretrained_models/bge-m3', device_map=device)
+    else:
+        beg_m3_tokenizer = None
+        beg_m3_model = None
     model, preprocess_train, preprocess_val = create_model_and_transforms(
         args.model,
         args.pretrained,
@@ -297,13 +301,15 @@ def main(args):
     if args.distributed and not args.horovod:
         if args.use_bn_sync:
             model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(model)
-            beg_m3_model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(beg_m3_model)
+            if args.custom_clip_loss:
+                beg_m3_model = torch.nn.SyncBatchNorm.convert_sync_batchnorm(beg_m3_model)
         ddp_args = {}
         if args.ddp_static_graph:
             # this doesn't exist in older PyTorch, arg only added if enabled
             ddp_args['static_graph'] = True
         model = torch.nn.parallel.DistributedDataParallel(model, device_ids=[device], **ddp_args)
-        beg_m3_model = torch.nn.parallel.DistributedDataParallel(beg_m3_model, device_ids=[device], **ddp_args)
+        if args.custom_clip_loss:
+            beg_m3_model = torch.nn.parallel.DistributedDataParallel(beg_m3_model, device_ids=[device], **ddp_args)
     
         if args.distill:
             dist_model = torch.nn.parallel.DistributedDataParallel(dist_model, device_ids=[device], **ddp_args)

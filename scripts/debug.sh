@@ -5,7 +5,6 @@ cd /home/yajun/projects/jiaaozhe/open_clip/src
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
     --save-most-recent \
-    --custom-clip-loss \
     --delete-previous-checkpoint \
     --lock-image \
     --lock-text \
@@ -15,10 +14,10 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --workers 2 \
     --report-to tensorboard \
     --save-frequency 5 \
-    --dataset-type csv \
+    --dataset-type jsonl \
     --csv-separator="," \
-    --train-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.csv"\
-    --val-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.csv" \
+    --train-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.jsonl"\
+    --val-data "/home/yajun/projects/jiaaozhe/open_clip/src/dataset/train.jsonl" \
     --csv-img-key image_path \
     --csv-caption-key caption \
     --warmup 1000 \

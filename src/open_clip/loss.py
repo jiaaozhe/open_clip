@@ -228,7 +228,7 @@ class CustomClipLoss(nn.Module):
         #     F.cross_entropy(logits_per_image, labels) +
         #     F.cross_entropy(logits_per_text, labels)
         # ) / 2
-        print('bge_m3_text_similarity', bge_m3_text_similarity)
+        # print('bge_m3_text_similarity', bge_m3_text_similarity)
         bge_m3_soft_targets = F.softmax(bge_m3_text_similarity / 0.1, dim=-1)
         print('bge_m3_soft_targets', bge_m3_soft_targets)
 
