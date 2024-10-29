@@ -4,7 +4,7 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
     --save-most-recent \
-    --delete-previous-checkpoint \
+    --force-patch-dropout 0.0 \
     --custom-clip-loss \
     --lock-image \
     --lock-text \

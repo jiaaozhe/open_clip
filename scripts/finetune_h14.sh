@@ -6,6 +6,7 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --name "train_full_finetuning_h14" \
     --save-most-recent \
     --custom-clip-loss \
+    --force-patch-dropout 0.0 \
     --seed 1234 \
     --batch-size 100 \
     --precision amp \
