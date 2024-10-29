@@ -454,7 +454,7 @@ def parse_args(args):
     )
     parser.add_argument(
         "--custom-clip-loss",
-        default=True,
+        default=False,
         action="store_true",
         help='Use Custom Clip loss with soft labels, which is construct with bge-m3 model.'
     )

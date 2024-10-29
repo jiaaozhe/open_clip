@@ -5,6 +5,7 @@ cd /home/yajun/projects/jiaaozhe/open_clip/src
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
     --save-most-recent \
+    --custom-clip-loss \
     --seed 1234 \
     --batch-size 200 \
     --precision amp \
