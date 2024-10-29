@@ -4,6 +4,7 @@ cd /home/yajun/projects/jiaaozhe/open_clip/src
 # set the training args
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
+    --name "train_full_finetuning_h14" \
     --save-most-recent \
     --custom-clip-loss \
     --seed 1234 \
@@ -21,6 +22,6 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --warmup 1000 \
     --lr=5e-6 \
     --wd=0.1 \
-    --epochs=200 \
+    --epochs=32 \
     --model xlm-roberta-large-ViT-H-14 \
     --pretrained "../pretrained_models/openclip-xlm-vit-h14.bin"
