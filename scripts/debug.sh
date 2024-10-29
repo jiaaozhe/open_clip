@@ -1,6 +1,5 @@
 # specify which GPUs you want to use.
 export CUDA_VISIBLE_DEVICES=0,1
-cd /home/yajun/projects/jiaaozhe/open_clip/src
 # set the training args
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
