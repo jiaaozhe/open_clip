@@ -6,8 +6,10 @@ cd /home/yajun/projects/jiaaozhe/open_clip/src
 torchrun --nproc_per_node 2 -m open_clip_train.main \
     --save-most-recent \
     --delete-previous-checkpoint \
+    --lock-image \
+    --lock-text \
     --seed 1234 \
-    --batch-size 100 \
+    --batch-size 1 \
     --precision amp \
     --workers 2 \
     --report-to tensorboard \
