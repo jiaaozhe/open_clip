@@ -4,6 +4,7 @@ export CUDA_VISIBLE_DEVICES=0,1
 
 torchrun --nproc_per_node 2 -m open_clip_train.main \
     --save-most-recent \
+    --custom-clip-loss \
     --delete-previous-checkpoint \
     --seed 1234 \
     --batch-size 100 \
