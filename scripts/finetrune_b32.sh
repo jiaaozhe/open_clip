@@ -23,5 +23,5 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --lr=5e-6 \
     --wd=0.1 \
     --epochs=32 \
-    --model xlm-roberta-large-ViT-H-14 \
+    --model xlm-roberta-base-ViT-B-32 \
     --pretrained "../pretrained_models/openclip-xlm-vit-b32.bin"
