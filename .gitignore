@@ -9,6 +9,7 @@ pretrained_models/
 logs/
 tests/data/
 *.pt
+scripts/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
