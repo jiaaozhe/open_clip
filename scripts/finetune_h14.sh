@@ -1,8 +1,8 @@
 # specify which GPUs you want to use.
-export CUDA_VISIBLE_DEVICES=0,1
+export CUDA_VISIBLE_DEVICES=4,5,6,7
 # set the training args
 
-torchrun --nproc_per_node 2 -m open_clip_train.main \
+torchrun --nproc_per_node 4 -m open_clip_train.main \
     --name "train_full_finetuning_h14" \
     --save-most-recent \
     --custom-clip-loss \
