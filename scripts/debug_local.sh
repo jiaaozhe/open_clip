@@ -9,7 +9,7 @@ torchrun --nproc_per_node 2 -m open_clip_train.main \
     --lock-image \
     --lock-text \
     --seed 1234 \
-    --batch-size 1 \
+    --batch-size 2 \
     --precision amp \
     --workers 2 \
     --report-to tensorboard \

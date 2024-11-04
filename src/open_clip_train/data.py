@@ -21,6 +21,8 @@ from torch.utils.data import Dataset, DataLoader, SubsetRandomSampler, IterableD
 from torch.utils.data.distributed import DistributedSampler
 from webdataset.filters import _shuffle
 from webdataset.tariterators import base_plus_ext, url_opener, tar_file_expander, valid_sample
+from PIL import ImageFile
+ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 try:
     import horovod.torch as hvd
