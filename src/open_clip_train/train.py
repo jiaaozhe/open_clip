@@ -293,45 +293,45 @@ def evaluate(model, data, epoch, args, tb_writer=None, tokenizer=None):
         cumulative_loss = 0.0
         cumulative_gen_loss = 0.0
         all_image_features, all_text_features = [], []
-        # with torch.inference_mode():
-        for i, batch in enumerate(dataloader):
-            images, texts, _ = batch
-            images = images.to(device=device, dtype=input_dtype, non_blocking=True)
-            texts = texts.to(device=device, non_blocking=True)
+        with torch.inference_mode():
+            for i, batch in enumerate(dataloader):
+                images, texts, _ = batch
+                images = images.to(device=device, dtype=input_dtype, non_blocking=True)
+                texts = texts.to(device=device, non_blocking=True)
 
-            with autocast():
-                model_out = model(images, texts)
-                image_features = model_out["image_features"]
-                text_features = model_out["text_features"]
-                logit_scale = model_out["logit_scale"]
-                # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
-                # however, system RAM is easily exceeded and compute time becomes problematic
-                all_image_features.append(image_features.cpu())
-                all_text_features.append(text_features.cpu())
-                logit_scale = logit_scale.mean()
-                logits_per_image = logit_scale * image_features @ text_features.t()
-                logits_per_text = logits_per_image.t()
+                with autocast():
+                    model_out = model(images, texts)
+                    image_features = model_out["image_features"]
+                    text_features = model_out["text_features"]
+                    logit_scale = model_out["logit_scale"]
+                    # features are accumulated in CPU tensors, otherwise GPU memory exhausted quickly
+                    # however, system RAM is easily exceeded and compute time becomes problematic
+                    all_image_features.append(image_features.cpu())
+                    all_text_features.append(text_features.cpu())
+                    logit_scale = logit_scale.mean()
+                    logits_per_image = logit_scale * image_features @ text_features.t()
+                    logits_per_text = logits_per_image.t()
 
-                batch_size = images.shape[0]
-                labels = torch.arange(batch_size, device=device).long()
-                total_loss = (
-                    F.cross_entropy(logits_per_image, labels) +
-                    F.cross_entropy(logits_per_text, labels)
-                ) / 2
+                    batch_size = images.shape[0]
+                    labels = torch.arange(batch_size, device=device).long()
+                    total_loss = (
+                        F.cross_entropy(logits_per_image, labels) +
+                        F.cross_entropy(logits_per_text, labels)
+                    ) / 2
 
-                gen_loss = maybe_compute_generative_loss(model_out)
+                    gen_loss = maybe_compute_generative_loss(model_out)
 
-            cumulative_loss += total_loss * batch_size
-            num_samples += batch_size
-            if is_master(args) and (i % 100) == 0:
-                logging.info(
-                    f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]\t"
-                    f"Clip Loss: {cumulative_loss / num_samples:.6f}\t")
-
-                if gen_loss is not None:
-                    cumulative_gen_loss += gen_loss * batch_size
+                cumulative_loss += total_loss * batch_size
+                num_samples += batch_size
+                if is_master(args) and (i % 100) == 0:
                     logging.info(
-                        f"Generative Loss: {cumulative_gen_loss / num_samples:.6f}\t")
+                        f"Eval Epoch: {epoch} [{num_samples} / {samples_per_val}]\t"
+                        f"Clip Loss: {cumulative_loss / num_samples:.6f}\t")
+
+                    if gen_loss is not None:
+                        cumulative_gen_loss += gen_loss * batch_size
+                        logging.info(
+                            f"Generative Loss: {cumulative_gen_loss / num_samples:.6f}\t")
 
         val_metrics = get_clip_metrics(
             image_features=torch.cat(all_image_features),
