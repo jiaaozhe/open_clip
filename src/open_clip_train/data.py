@@ -45,12 +45,13 @@ def crop_center(img, croph, cropw):
 
 class AlphaClipDataset(Dataset):
     def __init__(self, input_filename, transforms, img_key, caption_key, sep="\t", tokenizer=None):
-        logging.debug(f'Loading ids data from {input_filename}.')
+        logging.debug(f'Loading jsonl data from {input_filename}.')
         # input_filename输入的是所有训练数据的ids，格式为 *.pkl
-        self.ids = pickle.load(open(input_filename, 'rb'))
-        self.root_pth = './dataset/GRIT/'
-        # self.images = df[img_key].tolist()
-        # self.captions = df[caption_key].tolist()
+        # self.ids = pickle.load(open(input_filename, 'rb'))
+        # self.root_pth = './dataset/GRIT/'
+        df = pd.read_json(input_filename, lines=True)
+
+        self.images = df[img_key].tolist()
         self.transforms = transforms
         logging.debug('Done loading data.')
 
@@ -62,15 +63,19 @@ class AlphaClipDataset(Dataset):
         return len(self.ids)
 
     def __getitem__(self, idx):
-        id = self.ids[idx]
-        ann = json.loads(self.root_pth + str(id) + '.json')
-        img = Image.open(str(self.root_pth + str(id) + '.jpg'))
+        # id = self.ids[idx]
+        image_path = self.images[idx]
+        image_suffix = '.' + image_path.split('.')[-1]
+        ann = json.load(open(image_path).replace(image_suffix, '.json'))
+        img = Image.open(image_path)
         images = self.transforms(img)
-        ref_exps = ann['ref_exps']
-        choice = random.randint(0, len(ref_exps)-1)
-        ref_exp = ref_exps[choice]
-        text = ann['caption'][int(ref_exp[0]): int(ref_exp[1])]
-        mask = maskUtils.decode(ann['seudo_masks'][choice]) #TODO determine how to load mask data, maybe not load form ann.jsonl
+        
+        # ref_exps = ann['ref_exps']
+        ref_exps_zh = ann['ref_exps_zh']
+        choice = random.randint(0, len(ref_exps_zh)-1)
+        text = ref_exps_zh[choice]
+        # text = ann['caption'][int(ref_exp[0]): int(ref_exp[1])]
+        mask = maskUtils.decode(ann['ref_mask'][choice]) #TODO determine how to load mask data, maybe not load form ann.jsonl
         if mask.shape != img.shape[:2]:
             img = np.rot90(img)
         rgba = np.concatenate((img, np.expand_dims(mask, axis=-1)), axis=-1)
