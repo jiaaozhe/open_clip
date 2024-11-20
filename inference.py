@@ -3,7 +3,7 @@ from PIL import Image
 import open_clip
 
 # frozen_laion5b_s13b_b90k
-model, _, preprocess = open_clip.create_model_and_transforms('xlm-roberta-large-ViT-H-14', pretrained='./pretrained_models/open_clip_pytorch_model.bin')
+model, _, preprocess = open_clip.create_model_and_transforms('xlm-roberta-large-ViT-H-14', pretrained='pretrained_models/openclip-xlm-vit-h14.bin')
 model.eval()  # model in train mode by default, impacts some models with BatchNorm or stochastic depth active
 tokenizer = open_clip.get_tokenizer('xlm-roberta-large-ViT-H-14')
 

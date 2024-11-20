@@ -322,7 +322,7 @@ def main(args):
                 if "conv1_alpha" in k:
                     conv_opt_paras.append(v)
                 else:
-                    rest_params.append(v) 
+                    rest_params.append(v)
 
         optimizer = optim.AdamW(
             [
