@@ -413,6 +413,9 @@ class HFTokenizer:
             **kwargs
     ):
         from transformers import AutoTokenizer
+        if "xlm-roberta-large" in tokenizer_name:
+            current_work_dir = os.path.dirname(__file__)
+            tokenizer_name = os.path.join(current_work_dir, tokenizer_name)
         self.tokenizer = AutoTokenizer.from_pretrained(tokenizer_name, **kwargs)
         set_lang_fn = getattr(self.tokenizer, 'set_src_lang_special_tokens', None)
         if callable(set_lang_fn):

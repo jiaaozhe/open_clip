@@ -9,7 +9,7 @@
     },
     "text_cfg": {
         "hf_model_name": "model_configs/models--xlm-roberta-large",
-        "hf_tokenizer_name": "xlm-roberta-large",
+        "hf_tokenizer_name": "model_configs/models--xlm-roberta-large",
         "hf_pooler_type": "mean_pooler"
     }
 }
