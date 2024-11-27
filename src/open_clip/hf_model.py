@@ -115,7 +115,7 @@ class HFTextEncoder(nn.Module):
         # TODO: find better way to get this information
         uses_transformer_pooler = (pooler_type == "cls_pooler")
         # loda text config from local path
-        if "xlm-roberta-large" in model_name_or_path:
+        if "xlm-roberta" in model_name_or_path:
             current_work_dir = os.path.dirname(__file__)
             model_name_or_path = os.path.join(current_work_dir, model_name_or_path)
 
